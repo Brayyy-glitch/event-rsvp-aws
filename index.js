@@ -28,7 +28,7 @@ export const handler = async (event) => {
   const path = event.requestContext.http.path;
   const pathParams = event.pathParameters || {};
   const queryParams = event.queryStringParameters || {};
-  const body = event.body ? JSON.parse(parse.body) : {}; 
+  const body = event.body ? JSON.parse(event.body) : {}; 
 
   // Section 3
   // Handler CORS preflight request for browsers
@@ -80,14 +80,14 @@ export const handler = async (event) => {
       const responses = ['Yes', 'No'];
       const keys = responses.map(r => ({
         pk: { S: 'EVENT#${eventId}' },
-        sk: { S: 'RESPONS#${r}' }, 
+        sk: { S: 'RESPONSE#${r}' }, 
       }));
 
       const results = await dynamo.send(new BatchGetItemCommand({
         RequestItems: { "event-rsvp-responses": { Keys : keys } }
       }));
 
-      const items = results.Responses?.("event-rsvp-responses") || [];
+      const items = results.Responses?.["event-rsvp-responses"] || [];
       const counts = { Yes: 0, No: 0 };
       for (const item of items) {
         const key = item.sk.S.split("#")[1];
@@ -125,7 +125,7 @@ export const handler = async (event) => {
                   full_name: { S: full_name },
                   email:     { S: email},
                   response:  { S: response},
-                  timestamp: { S: String(now) }  
+                  timestamp: { N: String(now) }  
                 },
                 ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)"
               }
@@ -148,7 +148,7 @@ export const handler = async (event) => {
         return json({ message: "RSVP recorded!" }, 200);
 
       } catch (err) {
-        if (err.name === "TransactionCanceledException" || "ConditionalCheckFailedException") {
+        if (err.name === "TransactionCanceledException" || err.name === "ConditionalCheckFailedException") {
           // Put failed because RESPONDENT already exist
           return json({
             message: "You have already RSVP'd for this event with this email!",
@@ -188,7 +188,7 @@ export const handler = async (event) => {
 
       let attendees = result.Items.map(item => ({
         full_name: item.full_name?.S,
-        email: item.emai?.S,
+        email: item.email?.S,
         response: item.response?.S,
         timestamp: parseInt(item.timestamp?.N)
       }));
