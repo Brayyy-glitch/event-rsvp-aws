@@ -21,7 +21,7 @@ const dynamo = new DynamoDBClient({ region: process.env.REGION });
 
 //Section 2
 export const handler = async (event) => {
-  console.log('Receibed event:', JSON.stringify(event, null, 2));
+  console.log('Received event:', JSON.stringify(event, null, 2));
 
   // Extract useful parts of the  API Gateway event
   const method = event.requestContext.http.method;
@@ -79,8 +79,8 @@ export const handler = async (event) => {
 
       const responses = ['Yes', 'No'];
       const keys = responses.map(r => ({
-        pk: { S: 'EVENT#${eventId}' },
-        sk: { S: 'RESPONSE#${r}' }, 
+        pk: { S: `EVENT#${eventId}` },
+        sk: { S: `RESPONSE#${r}` }, 
       }));
 
       const results = await dynamo.send(new BatchGetItemCommand({
@@ -120,22 +120,22 @@ export const handler = async (event) => {
               Put: {
                 TableName: "event-rsvp-responses",
                 Item: {
-                  pk:        { S: 'EVENT#${event_id}' },
-                  sk:        { S: 'RESPONDENT#${email}' }, //uniqueness + email
+                  pk:        { S: `EVENT#${event_id}` },
+                  sk:        { S: `RESPONDENT#${email}` }, //uniqueness + email
                   full_name: { S: full_name },
-                  email:     { S: email},
-                  response:  { S: response},
+                  email:     { S: email },
+                  response:  { S: response },
                   timestamp: { N: String(now) }  
                 },
                 ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)"
               }
             },
             {
-              UpdateItemCommand: {
+              Update: {
                 TableName: "event-rsvp-responses",
                 Key: {
-                  pk: { S: 'EVENT#${event_id}' },
-                  sk: { S: 'RESPONSE#${response}' }
+                  pk: { S: `EVENT#${event_id}` },
+                  sk: { S: `RESPONSE#${response}` }
                 },
                 UpdateExpression: "ADD #count :one",
                 ExpressionAttributeNames: { "#count": "count" },
@@ -170,7 +170,7 @@ export const handler = async (event) => {
 
       let keyCondition = "pk = :pk AND begins_with(sk, :prefix)";
       let expressionValues = {
-        ":pk": { S: 'EVENT#${eventId}' },
+        ":pk": { S: `EVENT#${eventId}` },
         ":prefix": { S: "RESPONDENT#" }
       };
 
